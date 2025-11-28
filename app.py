@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import altair as alt # Altair 라이브러리 추가
 
 # 페이지 기본 설정 (제목, 아이콘 등)
 st.set_page_config(page_title="자유 환율 계산기", page_icon="💸")
@@ -57,15 +58,13 @@ if cost > 0:
     # 결과 2: 인플레이션 현실 (짜장면)
     st.warning(f"🚨 **현실 자각 타임:** \n지금 이 돈을 아껴서 투자하면, 10년 뒤 물가가 올라도 **짜장면 {int(jajang_count)}그릇**을 사먹을 수 있는 돈이 됩니다. 드시겠습니까?")
 
-    # --- 6. 그래프 시각화 및 연간 데이터 테이블 ---
+    # --- 6. 그래프 시각화 및 연간 데이터 테이블 (수정된 부분) ---
     st.write("#### 📈 내 돈이 10년 동안 S&P500 (연평균 10% 복리)으로 얼마나 불어날까?")
     
     # 연간 데이터 생성
     annual_data = []
     for i in range(1, years + 1):
-        # 10% 복리 계산
         invest_value = cost * ((1 + interest_rate) ** i)
-        # 현금 가치 (그대로)
         cash_value = cost
         
         annual_data.append({
@@ -76,13 +75,32 @@ if cost > 0:
 
     chart_data = pd.DataFrame(annual_data)
     
-    # 그래프
-    st.line_chart(
-        chart_data, 
-        x="년차", 
-        y=["S&P500 투자 자산 (10%)", "현금 (0%)"],
-        color=["#00CC00", "#FF0000"] # 투자는 녹색, 현금은 빨간색으로 대비 강화
+    # --- Altair를 사용하여 선 + 점(마커) 그래프 구현 ---
+    # 1. 데이터 재구조화 (Altair Long-Format 요구사항)
+    df_melted = chart_data.melt('년차', var_name='자산 종류', value_name='금액')
+
+    # 2. 기본 차트 설정
+    base = alt.Chart(df_melted).encode(
+        x=alt.X('년차:O', title='년차'), # O: 순서형 데이터 (연도 구분)
+        y=alt.Y('금액', title='금액 (원)', scale=alt.Scale(domain=[0, int(future_value*1.1)])), # Y축 범위 설정
+        color=alt.Color('자산 종류', scale=alt.Scale(domain=['S&P500 투자 자산 (10%)', '현금 (0%)'], range=['#00CC00', '#FF0000']))
+    ).properties(
+        height=300
     )
+
+    # 3. 선 그래프 레이어
+    line = base.mark_line().encode(
+        tooltip=['년차:O', alt.Tooltip('금액', format=','), '자산 종류']
+    )
+
+    # 4. 점(마커) 그래프 레이어
+    points = base.mark_circle(size=80).encode( # size: 점의 크기
+        tooltip=['년차:O', alt.Tooltip('금액', format=','), '자산 종류']
+    )
+
+    # 5. 선과 점 레이어 결합 후 Streamlit에 출력
+    st.altair_chart(line + points, use_container_width=True) 
+    # --------------------------------------------------------
     
     # 표로 나타내기 (연도별 수치)
     st.write("#### 📝 연도별 자산 변화 상세 수치 (S&P500 10% vs 현금)")
