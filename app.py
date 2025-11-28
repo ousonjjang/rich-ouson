@@ -81,8 +81,9 @@ if cost > 0:
 
     # 2. 기본 차트 설정
     base = alt.Chart(df_melted).encode(
-        x=alt.X('년차:O', title='년차'), # O: 순서형 데이터 (연도 구분)
-        y=alt.Y('금액', title='금액 (원)', scale=alt.Scale(domain=[0, int(future_value*1.1)])), # Y축 범위 설정
+        # X축 라벨 각도를 0도로 설정하여 똑바로 표시 (수정된 부분)
+        x=alt.X('년차:O', title='년차', axis=alt.Axis(labelAngle=0)), 
+        y=alt.Y('금액', title='금액 (원)', scale=alt.Scale(domain=[0, int(future_value*1.1)])),
         color=alt.Color('자산 종류', scale=alt.Scale(domain=['S&P500 투자 자산 (10%)', '현금 (0%)'], range=['#00CC00', '#FF0000']))
     ).properties(
         height=300
